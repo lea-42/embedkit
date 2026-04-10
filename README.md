@@ -95,19 +95,23 @@ export MODEL_S3_PATH=s3://my-bucket/models/multilingual-e5-base
 
 ### Custom model
 
-Pass any `SentenceTransformer`-compatible model via `EmbeddingModel`. You are responsible for prefixes.
+To use any [sentence-transformers](https://www.sbert.net/docs/sentence_transformer/pretrained_models.html) compatible model, define an `EmbeddingModel` with the model name and its required prefixes (if any). Pass it to `load_model()` at startup and then use it as the `config` argument.
 
 ```python
-from embedkit.embedder import EmbeddingModel, load_model, embed_chunks
+from embedkit.embedder import EmbeddingModel, load_model, embed_chunks, embed_query
 
 my_config = EmbeddingModel(
     model_name="sentence-transformers/all-mpnet-base-v2",
-    query_prefix="",
-    passage_prefix="",
+    query_prefix="",   # no prefix required for this model
+    passage_prefix="", # no prefix required for this model
 )
+
 await load_model(my_config)
+
 for chunk, embedding in embed_chunks(chunks, config=my_config):
     ...
+
+query_embedding = embed_query("my question", config=my_config)
 ```
 
 ## Supported embedding models
