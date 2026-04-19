@@ -1,5 +1,5 @@
 import pytest
-from embedkit.extractor import _promote_numbered_headings
+from docvec.extractor import _promote_numbered_headings
 
 
 def test_no_numbered_prefix_unchanged() -> None:

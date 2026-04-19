@@ -2,11 +2,11 @@ import asyncio
 from dataclasses import FrozenInstanceError
 from unittest.mock import MagicMock, patch
 
-import embedkit.embedder as vmod
+import docvec.embedder as vmod
 import numpy as np
 import pytest
 
-from embedkit.embedder import (
+from docvec.embedder import (
     DEFAULT_MODEL,
     E5_MULTILINGUAL_BASE,
     E5_MULTILINGUAL_SMALL,
@@ -82,7 +82,7 @@ def test_embedding_model_is_immutable() -> None:
 
 def test_load_model_sets_singleton() -> None:
     mock = MagicMock()
-    with patch("embedkit.embedder.SentenceTransformer", return_value=mock):
+    with patch("docvec.embedder.SentenceTransformer", return_value=mock):
         asyncio.run(vmod.load_model(DEFAULT_MODEL))
     assert vmod._model is mock
     assert vmod._model_config == DEFAULT_MODEL
@@ -90,7 +90,7 @@ def test_load_model_sets_singleton() -> None:
 
 def test_load_model_loads_only_once() -> None:
     mock = MagicMock()
-    with patch("embedkit.embedder.SentenceTransformer", return_value=mock) as mock_cls:
+    with patch("docvec.embedder.SentenceTransformer", return_value=mock) as mock_cls:
         async def run_twice() -> None:
             await vmod.load_model(DEFAULT_MODEL)
             await vmod.load_model(DEFAULT_MODEL)

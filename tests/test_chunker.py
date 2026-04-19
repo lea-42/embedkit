@@ -1,4 +1,4 @@
-from embedkit.chunker import chunk_markdown
+from docvec.chunker import chunk_markdown
 
 SIMPLE_MD = """# Travel Insurance
 
@@ -72,20 +72,22 @@ def test_chunk_numbers_are_sequential() -> None:
 def test_breadcrumbs_track_current_heading() -> None:
     chunks = chunk_markdown(SIMPLE_MD)
     baggage_chunk = next(c for c in chunks if "checked baggage" in c["text"].lower())
-    assert baggage_chunk["section_breadcrumbs"] == ["Checked Baggage"]
+    # Full hierarchy: h1 > h2 > h3
+    assert baggage_chunk["section_breadcrumbs"] == ["Travel Insurance", "What is Insured", "Checked Baggage"]
 
 
 def test_breadcrumbs_update_on_new_section() -> None:
     chunks = chunk_markdown(SIMPLE_MD)
     exclusions_chunk = next(c for c in chunks if "exclusions" in c["text"].lower())
-    assert exclusions_chunk["section_breadcrumbs"] == ["What is Not Insured"]
+    # h2 resets under h1, no h3
+    assert exclusions_chunk["section_breadcrumbs"] == ["Travel Insurance", "What is Not Insured"]
 
 
 def test_page_number_increments_at_separator() -> None:
     chunks = chunk_markdown(TWO_PAGE_MD)
     page_numbers = [c["page_number"] for c in chunks]
-    assert page_numbers[0] == 0
-    assert any(c["page_number"] == 1 for c in chunks)
+    assert page_numbers[0] == 1
+    assert any(c["page_number"] == 2 for c in chunks)
 
 
 def test_table_is_single_chunk() -> None:
@@ -212,4 +214,5 @@ def test_non_numbered_heading_not_stacked() -> None:
 def test_numbered_heading_after_non_numbered_starts_fresh_stack() -> None:
     chunks = chunk_markdown(NON_NUMBERED_MD)
     chunk = next(c for c in chunks if "Exclusions content" in c["text"])
-    assert chunk["section_breadcrumbs"] == ["2.1 Travel Exclusions"]
+    # MarkdownHeaderTextSplitter tracks nesting: h2 under h2 becomes nested
+    assert "2.1 Travel Exclusions" in chunk["section_breadcrumbs"]

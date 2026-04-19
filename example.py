@@ -6,9 +6,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from embedkit.logging_config import setup_logging
-from embedkit.extractor import extract
-from embedkit.embedder import DEFAULT_MODEL, load_model, embed_chunks
+from docvec.logging_config import setup_logging
+from docvec.extractor import extract
+from docvec.embedder import DEFAULT_MODEL, load_model, embed_chunks
 
 setup_logging()
 
