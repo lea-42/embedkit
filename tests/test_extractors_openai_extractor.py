@@ -22,7 +22,7 @@ FAKE_PDF_BYTES = b"%PDF-1.4 fake"
 
 
 def _make_extractor() -> OpenAIExtractor:
-    return OpenAIExtractor(api_key="test-key", model="gpt-4o", batch_size=10)
+    return OpenAIExtractor(api_key="test-key", model="gpt-4o-mini")
 
 
 def _setup_instructor_mock(mock_instructor: MagicMock, mock_openai: MagicMock, batch_return: BatchExtractionBase = SAMPLE_BATCH) -> tuple[MagicMock, MagicMock]:
@@ -109,15 +109,16 @@ def test_scanned_pdf_raises(mock_openai: MagicMock, mock_detect: MagicMock, tmp_
 @patch("docvec.extractors.openai_extractor.instructor")
 @patch("docvec.extractors.openai_extractor.OpenAI")
 def test_batching_splits_pages(mock_openai: MagicMock, mock_instructor: MagicMock, mock_detect: MagicMock, mock_page_count: MagicMock, mock_slice: MagicMock, tmp_path: Path) -> None:
-    """With batch_size=2 and a 5-page doc, expect 3 API calls."""
+    """A 25-page doc fits in 2 balanced batches (balanced_batches target: 25/12.5=2)."""
     pdf = tmp_path / "test.pdf"
     pdf.write_bytes(FAKE_PDF_BYTES)
+    mock_page_count.return_value = 25
     _, mock_instructor_client = _setup_instructor_mock(mock_instructor, mock_openai, EMPTY_BATCH)
 
-    extractor = OpenAIExtractor(api_key="test-key", model="gpt-4o", batch_size=2)
+    extractor = OpenAIExtractor(api_key="test-key", model="gpt-4o-mini")
     extractor.extract(str(pdf))
 
-    assert mock_instructor_client.chat.completions.create.call_count == 3  # ceil(5/2)
+    assert mock_instructor_client.chat.completions.create.call_count == 2
 
 
 @patch("docvec.extractors.openai_extractor._slice_pdf", return_value=FAKE_PDF_BYTES)
@@ -130,7 +131,7 @@ def test_open_sections_passed_to_next_batch(mock_openai: MagicMock, mock_instruc
     pdf = tmp_path / "test.pdf"
     pdf.write_bytes(FAKE_PDF_BYTES)
 
-    mock_page_count.return_value = 4
+    mock_page_count.return_value = 25  # balanced_batches(25) → 2 batches of 13/12
 
     batch1 = BatchExtractionBase(
         sections=[SectionBase(heading="Chapter 1", level=1, page_start=1, body="Intro.")],
@@ -146,7 +147,7 @@ def test_open_sections_passed_to_next_batch(mock_openai: MagicMock, mock_instruc
     mock_instructor.from_openai.return_value = mock_instructor_client
     mock_instructor_client.chat.completions.create.side_effect = [batch1, batch2]
 
-    extractor = OpenAIExtractor(api_key="test-key", model="gpt-4o", batch_size=2)
+    extractor = OpenAIExtractor(api_key="test-key", model="gpt-4o-mini")
     doc = extractor.extract_raw(str(pdf))
 
     # Verify second call prompt contains the open_sections from batch1

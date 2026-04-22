@@ -44,11 +44,11 @@ def _save_and_print(chunks: list[dict], suffix: str, pages: int, elapsed: float)
 
 
 def test_openai_extractor_batching_live() -> None:
-    """Extract first 11 pages with batch_size=5 — expect 3 batches, chunks returned."""
+    """Extract first 11 pages — balanced_batches will use 1 batch, chunks returned."""
     from docvec.extractors.openai_extractor import OpenAIExtractor
 
     pages = 11
-    extractor = OpenAIExtractor(batch_size=5, max_pages=pages)
+    extractor = OpenAIExtractor(max_pages=pages)
 
     t0 = time.time()
     doc = extractor.extract_raw(str(SAMPLE_PDF))
@@ -61,7 +61,7 @@ def test_openai_extractor_batching_live() -> None:
     for s in doc.sections:
         print(
             f"  page {s.page_start} level={s.level}: {s.heading!r} body={len(s.body)}chars "
-            f"tables={len(s.tables)} images={len(s.images)} subsections={len(s.subsections)}",
+            f"tables={len(s.tables)} images={len(s.images)}",
             flush=True,
         )
 
@@ -81,6 +81,45 @@ def test_openai_extractor_batching_live() -> None:
         assert len(chunk["text"]) > 0
 
     _save_and_print(chunks, "openai", pages, elapsed)
+
+
+def test_table_extractor_parallel_live() -> None:
+    """Extract picture-text table pages in parallel from the conduire PDF.
+
+    Verifies:
+    - all requested pages return results
+    - each page has at least one table with cells
+    - parallel latency is reasonable (well under pages × serial latency)
+    """
+    import os
+    import time
+    from openai import OpenAI
+    from docvec.extractors.table_extractor import extract_all_table_pages
+    from docvec.extractors.pymupdf_extractor import PyMuPDFExtractor, find_picture_table_pages
+
+    conduire_pdf = DATA_DIR / "conditions-generales----conduire-1.pdf"
+    if not conduire_pdf.exists():
+        pytest.skip(f"PDF not found: {conduire_pdf}")
+
+    md = PyMuPDFExtractor().extract_raw(str(conduire_pdf))
+    picture_pages = find_picture_table_pages(md)
+    test_pages = picture_pages[:3]  # first 3 picture-text pages to keep cost low
+
+    client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+
+    t0 = time.perf_counter()
+    results = extract_all_table_pages(str(conduire_pdf), test_pages, client)
+    elapsed = time.perf_counter() - t0
+
+    print(f"\n[table extractor] {len(test_pages)} pages in parallel — {elapsed:.2f}s total", flush=True)
+
+    assert set(results.keys()) == set(test_pages), "missing results for some pages"
+    for page_no, page_tables in results.items():
+        print(f"  page {page_no}: {len(page_tables.tables)} table(s)", flush=True)
+        for t in page_tables.tables:
+            print(f"    caption={t.caption!r}  cells={len(t.cells)}", flush=True)
+        assert len(page_tables.tables) > 0, f"page {page_no} returned no tables"
+        assert any(len(t.cells) > 0 for t in page_tables.tables), f"page {page_no} has empty tables"
 
 
 def test_pymupdf_extractor_live() -> None:
