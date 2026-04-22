@@ -16,5 +16,11 @@ build/
 .pytest_cache/
 .coverage
 
+# Generated extraction outputs
+tests/data/*.md
+tests/data/*.json
+tests/data/*.txt
+__docvec_cache__/
+
 # OS
 .DS_Store

@@ -15,7 +15,7 @@ from sentence_transformers import SentenceTransformer
 
 load_dotenv()
 
-from embedkit.logging_config import log_time
+from docvec.logging_config import log_time
 
 logger = logging.getLogger(__name__)
 

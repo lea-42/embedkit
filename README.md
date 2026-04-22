@@ -1,15 +1,42 @@
-# embedkit
+# docvec
 
-Extracts, chunks, and embeds PDF documents and queries for use in semantic search. 
+Extracts, chunks, and embeds PDF documents and queries for use in semantic search.
+
+## Extractors
+
+Three extractors are available, with different speed/accuracy tradeoffs:
+
+### PyMuPDFExtractor (fast, free)
+Uses `pymupdf4llm` locally. Good read order, correct heading hierarchy. Struggles with image-rendered tables (outputs garbled text).
+
+```
+PDF → pymupdf4llm → markdown → chunk
+```
+
+### HybridExtractor (recommended)
+Uses `pymupdf4llm` for text and OpenAI only for pages containing picture-text tables. Fast and accurate — parallel table extraction means latency ≈ slowest single page, not the sum.
+
+```
+PDF → pymupdf4llm → detect picture-text table pages
+                  → OpenAI (parallel, table-only prompt) → replace garbled blocks
+                  → chunk
+```
+
+### OpenAIExtractor (slow, most accurate)
+Sends the full PDF to OpenAI in balanced batches. Extracts structured sections, tables, and images. Use when you need complete structured extraction including section hierarchy.
+
+```
+PDF → balanced batches → OpenAI (sequential, full extraction) → markdown → chunk
+```
 
 ## Pipeline
 
 ```
-PDF → extract (pymupdf4llm) → chunk (markdown parser) → embed (sentence-transformers)
+PDF → extract → chunk → embed
 ```
 
-- **extract**: converts PDF to markdown, promotes numbered section headings to reflect depth, returns chunks with no side effects
-- **chunk**: splits markdown into chunks with breadcrumb tracking, page numbers, and section context
+- **extract**: converts PDF to markdown with breadcrumb-tracked section headings
+- **chunk**: splits markdown into chunks with page numbers and section context
 - **embed**: embeds chunks using a multilingual model, streams `(chunk, embedding)` pairs — caller decides where to store them
 
 ## Library usage

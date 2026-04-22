@@ -6,9 +6,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from embedkit.logging_config import setup_logging
-from embedkit.extractor import extract
-from embedkit.embedder import DEFAULT_MODEL, load_model, embed_chunks
+from docvec.logging_config import setup_logging
+from docvec.extractors.pymupdf_extractor import PyMuPDFExtractor
+from docvec.embedder import DEFAULT_MODEL, load_model, embed_chunks
 
 setup_logging()
 
@@ -19,7 +19,7 @@ if len(sys.argv) < 2:
 pdf_path = Path(sys.argv[1])
 
 # --- extract and chunk ---
-chunks = extract(str(pdf_path))
+chunks = PyMuPDFExtractor().extract(str(pdf_path))
 print(f"Extracted {len(chunks)} chunks")
 
 # save markdown and chunks next to the PDF
